@@ -15,3 +15,41 @@
  */
 
 package com.example.android.trackmysleepquality.database
+
+import android.content.Context
+import androidx.room.Database
+import androidx.room.Room
+import androidx.room.RoomDatabase
+
+@Database (entities = [SleepNight :: class], version = 1, exportSchema = false)
+abstract class SleepDatabase : RoomDatabase(){
+
+    abstract val sleepDatabaseDao : SleepDatabaseDao
+
+    // to be called by class name, without instance
+    companion object{
+
+        @Volatile
+        var INSTANCE : SleepDatabase? = null
+
+        fun getInstance(context: Context) : SleepDatabase{
+            //to get only 1 instance of DB in multithreading
+            synchronized(this){
+                //WHY USE LOCAL VARIABLE?
+                var instance = INSTANCE
+
+                if(instance == null) {
+                    instance = Room.databaseBuilder(
+                        context.applicationContext, SleepDatabase::class.java,
+                        "sleep_history_database"
+                    ).fallbackToDestructiveMigration().build()
+
+                    INSTANCE = instance
+
+                    //return instance
+                }
+                return instance
+            }
+        }
+    }
+}

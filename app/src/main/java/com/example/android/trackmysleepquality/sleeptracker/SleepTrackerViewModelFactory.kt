@@ -31,6 +31,7 @@ class SleepTrackerViewModelFactory(
         private val application: Application) : ViewModelProvider.Factory {
     @Suppress("unchecked_cast")
     override fun <T : ViewModel?> create(modelClass: Class<T>): T {
+        //if vm class exists, create it
         if (modelClass.isAssignableFrom(SleepTrackerViewModel::class.java)) {
             return SleepTrackerViewModel(dataSource, application) as T
         }
