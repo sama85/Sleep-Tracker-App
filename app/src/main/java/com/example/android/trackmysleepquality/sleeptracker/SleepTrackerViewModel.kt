@@ -17,11 +17,10 @@
 package com.example.android.trackmysleepquality.sleeptracker
 
 import android.app.Application
-import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.*
 import com.example.android.trackmysleepquality.database.SleepDatabaseDao
 import com.example.android.trackmysleepquality.database.SleepNight
+import com.example.android.trackmysleepquality.formatNights
 import kotlinx.coroutines.*
 
 /**
@@ -30,8 +29,12 @@ import kotlinx.coroutines.*
 class SleepTrackerViewModel(val database: SleepDatabaseDao,
         application: Application) : AndroidViewModel(application) {
 
-        private val tonight = MutableLiveData<SleepNight?>()
-        private val nights = database.getAllNights()
+        private val _tonight = MutableLiveData<SleepNight?>()
+        val tonight : LiveData<SleepNight?>
+                get() = _tonight
+
+        val nights = database.getAllNights()
+
 
         //WHY DO WE NEED A JOB?
         private var viewModelJob = Job()
@@ -46,7 +49,7 @@ class SleepTrackerViewModel(val database: SleepDatabaseDao,
         //WHY USE MAIN THREAD?
         private fun initializeTonight() {
                 uiScope.launch {
-                        tonight.value = getTonightFromDatabase()
+                        _tonight.value = getTonightFromDatabase()
 //                        tonight.value = database.getTonight()
 //                        if(tonight.value?.startTimeMilli != tonight.value?.endTimeMilli)
 //                                tonight.value = null
@@ -67,7 +70,7 @@ class SleepTrackerViewModel(val database: SleepDatabaseDao,
                 uiScope.launch {
                      var night = SleepNight()
                      insert(night)
-                     tonight.value = night
+                     _tonight.value = getTonightFromDatabase()
                 }
         }
 
@@ -82,8 +85,8 @@ class SleepTrackerViewModel(val database: SleepDatabaseDao,
         fun onStopTracking(){
                 uiScope.launch {
                         //EXPLAIN LINE?
-                        val night = tonight.value?: return@launch
-                        tonight.value?.endTimeMilli = System.currentTimeMillis()
+                        val night = _tonight.value?: return@launch
+                        night.endTimeMilli = System.currentTimeMillis()
                         update(night)
                 }
         }
@@ -97,7 +100,7 @@ class SleepTrackerViewModel(val database: SleepDatabaseDao,
         fun onClear(){
                 uiScope.launch{
                         clear()
-                        tonight.value = null
+                        _tonight.value = null
                 }
         }
 
@@ -106,6 +109,11 @@ class SleepTrackerViewModel(val database: SleepDatabaseDao,
                         database.clear()
                 }
         }
+
+        val nightsString = Transformations.map(nights, { nights ->
+                formatNights(nights, application.resources)
+
+        })
 
         override fun onCleared() {
                 super.onCleared()
