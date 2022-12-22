@@ -19,14 +19,100 @@ package com.example.android.trackmysleepquality.sleeptracker
 import android.app.Application
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.MutableLiveData
 import com.example.android.trackmysleepquality.database.SleepDatabaseDao
+import com.example.android.trackmysleepquality.database.SleepNight
+import kotlinx.coroutines.*
 
 /**
  * ViewModel for SleepTrackerFragment.
  */
-class SleepTrackerViewModel(
-        val database: SleepDatabaseDao,
+class SleepTrackerViewModel(val database: SleepDatabaseDao,
         application: Application) : AndroidViewModel(application) {
+
+        private val tonight = MutableLiveData<SleepNight?>()
+        private val nights = database.getAllNights()
+
+        //WHY DO WE NEED A JOB?
+        private var viewModelJob = Job()
+        //coroutines in ui scope will run in main thread
+        private val uiScope = CoroutineScope(Dispatchers.Main + viewModelJob)
+
+        init {
+            initializeTonight()
+        }
+
+        //uses a coroutine as it performs db operation
+        //WHY USE MAIN THREAD?
+        private fun initializeTonight() {
+                uiScope.launch {
+                        tonight.value = getTonightFromDatabase()
+//                        tonight.value = database.getTonight()
+//                        if(tonight.value?.startTimeMilli != tonight.value?.endTimeMilli)
+//                                tonight.value = null
+                }
+        }
+
+        //WHY CREATE ANOTHER COROUTINE IN IO THREAD?
+        private suspend fun getTonightFromDatabase(): SleepNight? {
+                return withContext(Dispatchers.IO){
+                        var night = database.getTonight()
+                        if(night?.startTimeMilli != night?.endTimeMilli)
+                                night = null
+                        night
+                }
+        }
+        //create night and insert to db
+        fun onStartTracking(){
+                uiScope.launch {
+                     var night = SleepNight()
+                     insert(night)
+                     tonight.value = night
+                }
+        }
+
+        //db operation in coroutine that runs on thread other than ui
+        private suspend fun insert(night: SleepNight) {
+                withContext(Dispatchers.IO){
+                        database.insert(night)
+                }
+        }
+
+        //update end time of tonight and in db
+        fun onStopTracking(){
+                uiScope.launch {
+                        //EXPLAIN LINE?
+                        val night = tonight.value?: return@launch
+                        tonight.value?.endTimeMilli = System.currentTimeMillis()
+                        update(night)
+                }
+        }
+
+        private suspend fun update(night: SleepNight) {
+                withContext(Dispatchers.IO){
+                        database.update(night)
+                }
+        }
+
+        fun onClear(){
+                uiScope.launch{
+                        clear()
+                        tonight.value = null
+                }
+        }
+
+        private suspend fun clear(){
+                withContext(Dispatchers.IO){
+                        database.clear()
+                }
+        }
+
+        override fun onCleared() {
+                super.onCleared()
+                viewModelJob.cancel()
+        }
+
+
 
 
 
