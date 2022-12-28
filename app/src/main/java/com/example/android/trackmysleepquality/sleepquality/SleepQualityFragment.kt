@@ -22,7 +22,12 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelProviders
+import androidx.navigation.fragment.findNavController
 import com.example.android.trackmysleepquality.R
+import com.example.android.trackmysleepquality.database.SleepDatabase
 import com.example.android.trackmysleepquality.databinding.FragmentSleepQualityBinding
 
 /**
@@ -38,16 +43,43 @@ class SleepQualityFragment : Fragment() {
      *
      * This function uses DataBindingUtil to inflate R.layout.fragment_sleep_quality.
      */
+    private lateinit var binding : FragmentSleepQualityBinding
+    private lateinit var viewModel : SleepQualityViewModel
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?,
                               savedInstanceState: Bundle?): View? {
 
         // Get a reference to the binding object and inflate the fragment views.
-        val binding: FragmentSleepQualityBinding = DataBindingUtil.inflate(
+        binding = DataBindingUtil.inflate(
                 inflater, R.layout.fragment_sleep_quality, container, false)
 
+        //to get db instance
         val application = requireNotNull(this.activity).application
 
+        //to create vm
+        val database = SleepDatabase.getInstance(application).sleepDatabaseDao
+        val args = SleepQualityFragmentArgs.fromBundle(arguments!!)
+        val viewModelFactory = SleepQualityViewModelFactory(args.sleepNightKey, database)
 
+        viewModel = ViewModelProviders.of(this, viewModelFactory).get(SleepQualityViewModel::class.java)
+
+        viewModel.navigateToSleepTracker.observe(viewLifecycleOwner, Observer{
+            if(it == true){
+                this.findNavController().navigate(SleepQualityFragmentDirections.actionSleepQualityFragmentToSleepTrackerFragment())
+                viewModel.doneNavigation()
+            }
+        })
+
+        setOnclickListeners()
         return binding.root
+    }
+
+    private fun setOnclickListeners() {
+        binding.qualityZeroImage.setOnClickListener{viewModel.onSetSleepQuality(0)}
+        binding.qualityOneImage.setOnClickListener{viewModel.onSetSleepQuality(1)}
+        binding.qualityTwoImage.setOnClickListener{viewModel.onSetSleepQuality(2)}
+        binding.qualityThreeImage.setOnClickListener{viewModel.onSetSleepQuality(3)}
+        binding.qualityFourImage.setOnClickListener{viewModel.onSetSleepQuality(4)}
+        binding.qualityFiveImage.setOnClickListener {viewModel.onSetSleepQuality(5)}
     }
 }
