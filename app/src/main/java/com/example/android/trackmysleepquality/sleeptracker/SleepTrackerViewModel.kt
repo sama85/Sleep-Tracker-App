@@ -31,11 +31,16 @@ class SleepTrackerViewModel(
     application: Application
 ) : AndroidViewModel(application) {
 
+    //data encapsulation pattern
     private val _tonight = MutableLiveData<SleepNight?>()
     val tonight: LiveData<SleepNight?>
         get() = _tonight
 
     val nights = database.getAllNights()
+
+    private var _navigateToSleepQuality = MutableLiveData<SleepNight?>()
+    val navigateToSleepQuality : LiveData<SleepNight?>
+        get() = _navigateToSleepQuality
 
 
     //WHY DO WE NEED A JOB?
@@ -69,20 +74,28 @@ class SleepTrackerViewModel(
 
     //create night and insert to db
     fun onStartTracking() {
+
+
         var night = SleepNight()
-        IOScope.launch {
-            database.insert(night)
-            // insert(night)
-            _tonight.postValue(getTonightFromDatabase())
+        uiScope.launch {
+            //database.insert(night)
+            //how does the suspend function in uiScope coroutine executes in another thread?
+            //does it block this thread and processor excutes it in IO thread or wait for IO thread to be
+            //processed then executes?
+            //processor executes one thread at a time?
+
+             insert(night)
+            //_tonight.value = night
+            _tonight.value = getTonightFromDatabase()
         }
     }
 
-    //db operation in coroutine that runs on thread other than ui
-//        private suspend fun insert(night: SleepNight) {
-//                withContext(Dispatchers.IO){
-//                        database.insert(night)
-//                }
-//        }
+        //db operation in coroutine that runs on thread other than ui
+        private suspend fun insert(night: SleepNight) {
+                withContext(Dispatchers.IO){
+                        database.insert(night)
+                }
+        }
 
     //update end time of tonight and in db
     fun onStopTracking() {
@@ -91,7 +104,12 @@ class SleepTrackerViewModel(
             val night = _tonight.value ?: return@launch
             night.endTimeMilli = System.currentTimeMillis()
             update(night)
+            _navigateToSleepQuality.value = night
         }
+    }
+
+    fun doneNavigation(){
+        _navigateToSleepQuality.value = null
     }
 
     private suspend fun update(night: SleepNight) {
