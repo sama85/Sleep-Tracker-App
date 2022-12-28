@@ -20,6 +20,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.view.isVisible
 import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
@@ -68,14 +69,26 @@ class SleepTrackerFragment : Fragment() {
             binding.textview.text = nights
         })
 
+
         sleepTrackerViewModel.navigateToSleepQuality.observe(viewLifecycleOwner, Observer { night ->
                 night?.let{
                     this.findNavController().navigate(SleepTrackerFragmentDirections.actionSleepTrackerFragmentToSleepQualityFragment(night.nightId))
-                    sleepTrackerViewModel.doneNavigation()
+                   // sleepTrackerViewModel.doneNavigation()
                 }
             }
         )
 
+        sleepTrackerViewModel.startButtonVisible.observe(viewLifecycleOwner, Observer{
+            binding.startButton.isEnabled = it
+        })
+
+        sleepTrackerViewModel.stopButtonVisible.observe(viewLifecycleOwner, Observer{
+            binding.stopButton.isEnabled = it
+        })
+
+        sleepTrackerViewModel.clearButtonVisible.observe(viewLifecycleOwner, Observer{
+            binding.clearButton.isEnabled = it
+        })
         binding.startButton.setOnClickListener{
             sleepTrackerViewModel.onStartTracking()
         }

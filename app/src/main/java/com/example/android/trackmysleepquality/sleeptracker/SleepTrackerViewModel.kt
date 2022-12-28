@@ -39,9 +39,20 @@ class SleepTrackerViewModel(
     val nights = database.getAllNights()
 
     private var _navigateToSleepQuality = MutableLiveData<SleepNight?>()
-    val navigateToSleepQuality : LiveData<SleepNight?>
+    val navigateToSleepQuality: LiveData<SleepNight?>
         get() = _navigateToSleepQuality
 
+    val startButtonVisible = Transformations.map(tonight) {
+        it == null
+    }
+
+    val stopButtonVisible = Transformations.map(tonight) {
+        it != null
+    }
+
+    val clearButtonVisible = Transformations.map(nights) {
+        it.isNotEmpty()
+    }
 
     //WHY DO WE NEED A JOB?
     private var viewModelJob = Job()
@@ -62,7 +73,6 @@ class SleepTrackerViewModel(
         }
     }
 
-    //WHY CREATE ANOTHER COROUTINE IN IO THREAD?
     private suspend fun getTonightFromDatabase(): SleepNight? {
         return withContext(Dispatchers.IO) {
             var night = database.getTonight()
@@ -75,8 +85,7 @@ class SleepTrackerViewModel(
     //create night and insert to db
     fun onStartTracking() {
 
-
-        var night = SleepNight()
+        val night = SleepNight()
         uiScope.launch {
             //database.insert(night)
             //how does the suspend function in uiScope coroutine executes in another thread?
@@ -84,18 +93,18 @@ class SleepTrackerViewModel(
             //processed then executes?
             //processor executes one thread at a time?
 
-             insert(night)
+            insert(night)
             //_tonight.value = night
             _tonight.value = getTonightFromDatabase()
         }
     }
 
-        //db operation in coroutine that runs on thread other than ui
-        private suspend fun insert(night: SleepNight) {
-                withContext(Dispatchers.IO){
-                        database.insert(night)
-                }
+    //db operation in coroutine that runs on thread other than ui
+    private suspend fun insert(night: SleepNight) {
+        withContext(Dispatchers.IO) {
+            database.insert(night)
         }
+    }
 
     //update end time of tonight and in db
     fun onStopTracking() {
@@ -108,7 +117,7 @@ class SleepTrackerViewModel(
         }
     }
 
-    fun doneNavigation(){
+    fun doneNavigation() {
         _navigateToSleepQuality.value = null
     }
 
